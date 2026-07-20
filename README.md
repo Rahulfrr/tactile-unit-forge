@@ -1,3 +1,4 @@
+Markdown
 # ◈ UnitForge ◈
 
 > **AI-Powered Course Material Foundry** – Transform unstructured lecture slides, syllabus outlines, and massive course PDFs into exam-ready structured study modules instantly.
@@ -37,3 +38,53 @@ UnitForge uses localized parsing infrastructure paired with the Gemini API to sy
    ```bash
    git clone [https://github.com/YOUR_USERNAME/UnitForge.git](https://github.com/YOUR_USERNAME/UnitForge.git)
    cd UnitForge
+Install development dependencies:
+
+Bash
+npm install
+Initialize your local configuration file:
+
+Bash
+cp .env.example .env
+Open the .env file and paste your secret key behind the VITE_GEMINI_API_KEY= field.
+
+Fire up the local development loop:
+
+Bash
+npm run dev
+Open your browser and navigate to http://localhost:5173.
+
+📋 API Implementation Context
+The backend execution pipeline constructs explicit JSON schemas inside the network fetch loop to ensure the model responds with perfectly structured content:
+
+JSON
+{
+  "type": "OBJECT",
+  "properties": {
+    "units": { "type": "ARRAY", "items": { "type": "OBJECT" } },
+    "tableRows": { "type": "ARRAY", "items": { "type": "ARRAY", "items": { "type": "STRING" } } },
+    "asciiDiagram": { "type": "STRING" }
+  }
+}
+⚖️ License
+Distributed under the MIT License. See LICENSE for more information.
+
+
+---
+
+## 📤 3. Pushing the Documentation to GitHub
+
+Once you've saved these files, open your terminal to stage and push everything up to your repository:
+
+```bash
+# Verify the files are recognized
+git status
+
+# Stage the changes safely
+git add .env.example .gitignore README.md src/main.js
+
+# Commit your changes
+git commit -m "docs: add README.md and .env structure configuration"
+
+# Push to your remote repository
+git push origin main
