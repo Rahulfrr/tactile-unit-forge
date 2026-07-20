@@ -1,2 +1,12 @@
-{"scripts":{"dev":"python3 -m http.server 5173","build":"node --check src/main.js","preview":"python3 -m http.server 4173"},"dependencies":{},"devDependencies":{},"type":"module"}
-{"scripts":{"dev":"python -m http.server 5173","build":"node --check src/main.js","preview":"python3 -m http.server 4173"},"dependencies":{},"devDependencies":{}}
+{
+  "name": "tactile-unit-forge",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "python -m http.server 5173",
+    "build": "node --check src/main.js",
+    "preview": "python -m http.server 4173"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
