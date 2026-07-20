@@ -35,7 +35,7 @@ let uploadCountText = '00 files';
 let uploadCountActive = false;
 let selectedFiles = [];
 const provider = aiProviderPreview();
-let savedApiKey = localStorage.getItem('unitforge_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+let savedApiKey = localStorage.getItem('unitforge_api_key') || import.meta.env.VITE_OPENAI_API_KEY || '';
 const root = document.getElementById('root');
 const escapeAttr = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 
@@ -66,15 +66,10 @@ async function extractTextFromFiles(files) {
   return chunks.join('\n\n');
 }
 
-function parseStrictJson(text) {
-  const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
-  return JSON.parse(cleaned);
-}
-
 async function generateStudyModules() {
-  const apiKey = localStorage.getItem('unitforge_api_key');
+  const apiKey = savedApiKey || localStorage.getItem('unitforge_api_key');
   if (!apiKey) {
-    alert('Please enter your API key in settings.');
+    alert('Please enter your OpenAI API key in settings or set it in your environment.');
     document.querySelector('.settings-drawer')?.classList.add('open');
     return;
   }
@@ -89,69 +84,80 @@ async function generateStudyModules() {
   
   try {
     appState.extractedText = await extractTextFromFiles(selectedFiles);
-    appState.statusMessage = 'AI Forging Units... (This may take 30-60 seconds)';
+    appState.statusMessage = 'AI Forging Units via OpenAI... (This may take 30-60 seconds)';
     render();
 
-    const systemPrompt = `You are UnitForge, an exam-preparation module generator. Return ONLY STRICT JSON matching this exact structure, with no markdown wrappers outside the json block, no comments, and no extra prose:
-{
-  "units": [ { "id": "unit-01", "title": "Unit 1", "label": "string", "status": "Ready", "weight": "20%", "focus": ["string", "string"], "questions": ["string"] } ],
-  "tableRows": [ ["Header1", "Header2", "Header3"], ["Data", "Data", "Data"] ],
-  "asciiDiagram": "string representing an ASCII diagram"
-}
+    const systemPrompt = `You are UnitForge, an exam-preparation module generator. Return ONLY STRICT JSON matching the schema requirements.
 Analyze the core technical curriculum provided. Create 4 to 6 highly comprehensive unit-wise exam modules, write clear exam-ready long questions, and construct high-density comparative tableRows exactly three columns wide. Ensure diagrams use standard text layout elements.`;
     
     const userPrompt = `Course material extracted from uploaded files:\n\n${appState.extractedText.slice(0, 60000)}`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-        generationConfig: { 
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              units: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    id: { type: "STRING" },
-                    title: { type: "STRING" },
-                    label: { type: "STRING" },
-                    status: { type: "STRING" },
-                    weight: { type: "STRING" },
-                    focus: { type: "ARRAY", items: { type: "STRING" } },
-                    questions: { type: "ARRAY", items: { type: "STRING" } }
-                  },
-                  required: ["id", "title", "label", "status", "weight", "focus", "questions"]
-                }
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { 
+          type: "json_schema",
+          json_schema: {
+            name: "unit_forge_synthesis",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                units: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "string" },
+                      title: { type: "string" },
+                      label: { type: "string" },
+                      status: { type: "string" },
+                      weight: { type: "string" },
+                      focus: { type: "array", items: { type: "string" } },
+                      questions: { type: "array", items: { type: "string" } }
+                    },
+                    required: ["id", "title", "label", "status", "weight", "focus", "questions"],
+                    additionalProperties: false
+                  }
+                },
+                tableRows: {
+                  type: "array",
+                  items: { 
+                    type: "array", 
+                    items: { type: "string" } 
+                  }
+                },
+                asciiDiagram: { type: "string" }
               },
-              tableRows: {
-                type: "ARRAY",
-                items: { type: "ARRAY", items: { type: "STRING" } }
-              },
-              asciiDiagram: { type: "STRING" }
-            },
-            required: ["units", "tableRows", "asciiDiagram"]
-          },
-          temperature: 0.1 
-        }
+              required: ["units", "tableRows", "asciiDiagram"],
+              additionalProperties: false
+            }
+          }
+        },
+        temperature: 0.1 
       })
     });
     
     if (!response.ok) {
       const rawError = await response.json().catch(() => ({}));
-      console.error("Gemini Failure Payload:", JSON.stringify(rawError, null, 2));
+      console.error("OpenAI Failure Payload:", JSON.stringify(rawError, null, 2));
       throw new Error(`AI provider request failed with status ${response.status}: ${rawError.error?.message || 'Unknown Context'}`);
     }
     
     const payload = await response.json();
-    const text = payload.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = payload.choices?.[0]?.message?.content;
     if (!text) throw new Error('AI provider returned an empty response block.');
     
-    const generated = parseStrictJson(text);
+    const generated = JSON.parse(text);
     appState.units = generated.units;
     appState.tableRows = generated.tableRows;
     appState.asciiDiagram = generated.asciiDiagram;
@@ -187,7 +193,7 @@ function render() {
       <button class="drawer-close">×</button>
       <div class="drawer-icon">⌘</div>
       <h2>Settings</h2>
-      <label>API key<input id="apiKeyInput" type="password" placeholder="Paste key for local session" value="${escapeAttr(savedApiKey)}" /></label>
+      <label>OpenAI API key<input id="apiKeyInput" type="password" placeholder="Paste key for local session" value="${escapeAttr(savedApiKey)}" /></label>
       <p class="mono">Provider status: ${provider.mode}</p>
     </aside>
     
