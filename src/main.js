@@ -35,7 +35,7 @@ let uploadCountText = '00 files';
 let uploadCountActive = false;
 let selectedFiles = [];
 const provider = aiProviderPreview();
-let savedApiKey = localStorage.getItem('unitforge_api_key') || '';
+let savedApiKey = localStorage.getItem('unitforge_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
 const root = document.getElementById('root');
 const escapeAttr = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 

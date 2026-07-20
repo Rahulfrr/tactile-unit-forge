@@ -1,0 +1,3 @@
+# Local environment variables secrets tracking block
+.env
+.env.local
