@@ -17,6 +17,54 @@ function aiProviderPreview() {
 }
 
 let activeUnit = units[1];
+let uploadCountText = '04 files';
+let uploadCountActive = false;
+const provider = aiProviderPreview();
+const root = document.getElementById('root');
+function render() {
+  root.innerHTML = `<div class="dot-matrix" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div><svg class="cursor-tracer" aria-hidden="true" viewBox="0 0 80 80"><circle class="cursor-ring" cx="40" cy="40" r="25"></circle><circle class="cursor-dot" cx="40" cy="40" r="4"></circle></svg>
+  <input type="file" id="hiddenFileInput" multiple accept=".pdf,.pptx" style="display: none;">
+  <nav class="top-nav"><div class="brand"><span>UnitForge</span><small>AI exam module foundry</small></div><div class="nav-links"><a href="#ingest">Ingest</a><a href="#units">Units</a><a href="#output">Output</a></div><button class="icon-btn" aria-label="Settings">⚙</button></nav>
+  <aside class="settings-drawer"><button class="drawer-close">×</button><div class="drawer-icon">⌘</div><h2>Settings</h2><label>API key<input type="password" placeholder="Paste key for local session" /></label><p class="mono">Provider status: ${provider.mode}</p></aside>
+  <main><section class="hero panel"><p class="eyebrow">TACTILE TECH-NOIR / UNIT-WISE PREP</p><h1>Forge course files into structured exam-ready units.</h1><p>Upload PDF or PPTX material, split it into logical units, and render high-density notes, questions, tables, and diagrams for written replication.</p></section>
+  <section id="ingest" class="ingest-grid"><div class="dropzone" style="cursor: pointer;"><div class="upload-icon">⇧</div><h2>Ingestion Zone</h2><p>Drag PDF / PPTX files here</p><button type="button">Process Materials</button></div><div class="panel stat"><span class="mono">QUEUE</span><strong class="queue-count ${uploadCountActive ? 'is-active' : ''}">${uploadCountText}</strong><p>Lecture decks, reference PDFs, previous question bank, and syllabus outline.</p></div></section>
+  <section id="units" class="workspace"><aside class="unit-list"><h2>Unit-Wise Dashboard</h2>${units.map(unit => `<button data-unit="${unit.id}" class="unit-card ${activeUnit.id === unit.id ? 'active' : ''}"><span>${unit.title}</span><strong>${unit.label}</strong><em>${unit.status} / ${unit.weight}</em><b>›</b></button>`).join('')}</aside>
+  <section id="output" class="output panel"><div class="output-head"><div class="file-icon">▤</div><div><p class="eyebrow">Structured Output Display</p><h2>${activeUnit.title}: ${activeUnit.label}</h2></div></div><h3>Unit-Wise Exam Questions</h3><ol>${activeUnit.questions.map(q => `<li>${q}</li>`).join('')}</ol><h3>Structured Tables</h3><div class="data-table">${tableRows.flatMap((row, r) => row.map(cell => `<div class="${r === 0 ? 'th' : ''}">${cell}</div>`)).join('')}</div><h3>Text-Based Diagram</h3><pre class="ascii-diagram">${asciiDiagram}</pre><h3>Revision Focus</h3><div class="focus-grid">${activeUnit.focus.map(item => `<span>${item}</span>`).join('')}</div><div class="learning-tools"><article><h3>Socratic Tutor</h3><p>Ask: “What assumption makes this proof work?” and reveal guided prompts unit by unit.</p></article><article><h3>Exam Simulation</h3><p>Timed long-answer prompts, marks split, and answer skeletons for written practice.</p></article><article><h3>Weakness Tracker</h3><p>Tracks missed concepts, repeat errors, and unit-level confidence decay.</p></article><article><h3>Focus Mode</h3><p>Locks the view to one unit, one table, and one diagram for distraction-free revision.</p></article></div></section></section></main><footer><span>◈</span> Built for demo mode with populated mock educational output.</footer>`;
+  bind();
+}
+function bind() {
+  document.querySelector('.icon-btn').onclick = () => document.querySelector('.settings-drawer').classList.add('open');
+  document.querySelector('.drawer-close').onclick = () => document.querySelector('.settings-drawer').classList.remove('open');
+  document.querySelectorAll('.unit-card').forEach(btn => btn.onclick = () => { activeUnit = units.find(unit => unit.id === btn.dataset.unit); render(); });
+  const ingestionZone = document.querySelector('.dropzone');
+  const hiddenFileInput = document.querySelector('#hiddenFileInput');
+  ingestionZone.addEventListener('click', () => hiddenFileInput.click());
+  hiddenFileInput.addEventListener('change', event => {
+    const fileCount = event.target.files.length;
+    uploadCountText = `${String(fileCount).padStart(2, '0')} files uploaded`;
+    uploadCountActive = true;
+    document.querySelector('.queue-count').textContent = uploadCountText;
+    document.querySelector('.queue-count').classList.add('is-active');
+    console.log('UnitForge ingestion payload metrics', { fileCount, acceptedTypes: ['.pdf', '.pptx'] });
+  });
+}
+window.addEventListener('scroll', () => document.querySelector('.top-nav')?.classList.toggle('nav-compact', window.scrollY > 36));
+window.addEventListener('mousemove', event => { const cursor = document.querySelector('.cursor-tracer'); if (cursor) cursor.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`; });
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+let matrixX = 0;
+let matrixY = 0;
+window.addEventListener('mousemove', event => { mouseX = event.clientX; mouseY = event.clientY; }, { passive: true });
+function animateDotMatrix() {
+  const targetX = (mouseX - window.innerWidth / 2) * 0.04;
+  const targetY = (mouseY - window.innerHeight / 2) * 0.04;
+  matrixX += (targetX - matrixX) * 0.08;
+  matrixY += (targetY - matrixY) * 0.08;
+  document.querySelector('.dot-matrix')?.style.setProperty('transform', `translate3d(${matrixX}px, ${matrixY}px, 0)`);
+  requestAnimationFrame(animateDotMatrix);
+}
+render();
+requestAnimationFrame(animateDotMatrix);
 const provider = aiProviderPreview();
 const root = document.getElementById('root');
 function render() {
